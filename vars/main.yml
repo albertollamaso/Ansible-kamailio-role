@@ -1,0 +1,9 @@
+---
+kamailio_version: 4.4
+dest_directory: /usr/local/src/kamailio-{{ kamailio_version }}
+git_clone: "{{ dest_directory }}/kamailio"
+MySQL_root_pass: your_root_password_here
+
+var_files:
+  - [ "vars/{{ ansible_os_family }}.yml", "vars/os_defaults.yml" ]
+

@@ -1,0 +1,51 @@
+---
+# Debian Packages
+- name: Update APT Cache
+  apt: update_cache=yes
+
+- name: Install Prerequisites Kamailio packages
+  apt: state=present pkg={{ item }}
+  with_items:
+  - git
+  - gcc
+  - flex
+  - bison
+  - libmysqlclient-dev
+  - make
+
+- name: Install Extra Kamailio packages
+  apt: state=present pkg={{ item }}
+  with_items:
+  - libssl-dev
+  - libcurl4-openssl-dev
+  - libxml2-dev
+  - libpcre3-dev
+
+
+- name: Install tool-packages
+  apt: state=present pkg={{ item }}
+  with_items:
+  - vim-nox
+  - tcpdump
+  - ntp
+  - iftop
+  - htop
+  - python-pip
+
+- name: Set MySQL root password before installing
+  debconf: name='mysql-server' question='mysql-server/root_password' value='{{MySQL_root_pass | quote}}' vtype='password'
+
+- name: Confirm MySQL root password before installing
+  debconf: name='mysql-server' question='mysql-server/root_password_again' value='{{MySQL_root_pass | quote}}' vtype='password'
+
+- name: Install MySQL
+  apt: package={{ item }} state=installed force=yes update_cache=yes cache_valid_time=3600
+  with_items:
+    - mysql-server
+    - mysql-client
+    - python-mysqldb
+
+- name: Install pexpect
+  pip:
+    name: pexpect
+

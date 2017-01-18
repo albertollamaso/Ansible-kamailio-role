@@ -1,0 +1,12 @@
+[Unit]
+Description=Kamailio SIP Server
+
+[Service]
+Type=forking
+PIDFile=/var/run/kamailio.pid
+ExecStart=/usr/local/sbin/kamctl start
+ExecRestart=/usr/local/sbin/kamctl restart
+ExecStop=/usr/local/sbin/kamctl stop
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,95 @@
+- name: Create directory for source code from Git
+  file:
+    path: "{{ dest_directory }}"
+    state: directory
+    mode: 0755
+
+- name: Git clone Kamailio
+  git: 
+    repo: git://git.kamailio.org/kamailio
+    dest: "{{ git_clone }}"
+    recursive: no
+    clone: yes
+    version: origin/4.4
+
+
+- name: Generate build config files
+  become: yes
+  shell: "{{ item }}"
+  with_items: 
+    - "cd {{ dest_directory }}/kamailio && make include_modules='db_mysql' cfg"
+    - "cd {{ dest_directory }}/kamailio &&  make all"
+    - "cd {{ dest_directory }}/kamailio && make install"
+  
+
+
+- name: Create MySQL database
+  lineinfile: 
+    dest: /usr/local/etc/kamailio/kamctlrc
+    state: present 
+    regexp: "^# DBENGINE=MYSQL"
+    line: "DBENGINE=MYSQL"
+    backrefs: yes
+
+- name: Create the database used by Kamailio
+  expect:
+    command: /usr/local/sbin/kamdbctl create
+    responses:
+      MySQL password for root: "{{ MySQL_root_pass }}"
+      (?i)Install: "y"      
+
+
+- name: Kamailio startups scripts
+  shell: "{{ item }}"
+  with_items:
+    - "cp /usr/local/src/kamailio-{{ kamailio_version }}/kamailio/pkg/kamailio/deb/debian/kamailio.init /etc/init.d/kamailio"
+    - "chmod 755 /etc/init.d/kamailio"
+    - "cp /usr/local/src/kamailio-{{ kamailio_version }}/kamailio/pkg/kamailio/deb/debian/kamailio.default /etc/default/kamailio"
+    - "mkdir -p /var/run/kamailio"
+
+- name: Updating the $DAEMON and $CFGFILE values
+  lineinfile: 
+    dest: /etc/init.d/kamailio
+    state: present
+    backrefs: yes
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+  with_items:
+    - { regexp: '^DAEMON=', line: 'DAEMON=/usr/local/sbin/kamailio' }
+    - { regexp: '^CFGFILE=', line: 'CFGFILE=/usr/local/etc/kamailio/kamailio.cfg' }
+
+- name: Updating kamilio default file
+  lineinfile: 
+    dest: /etc/default/kamailio
+    state: present
+    backrefs: yes
+    regexp: "^#RUN_KAMAILIO="
+    line: "RUN_KAMAILIO=yes"
+
+
+- name: Create Kamailio group
+  group:
+    name: kamailio
+    state: present
+
+- name: Create Kamailio user 
+  user:
+    name: kamailio
+    comment: "kamailio"
+    shell: /bin/false
+    system: yes
+    group: kamailio
+    move_home: yes
+    home: /var/run/kamailio
+
+- name: Setting directory permissions
+  file:
+    path: /var/run/kamailio
+    owner: kamailio
+    group: kamailio
+    
+- name: Copying systemd script
+  copy:
+    src: files/kamailio.service
+    dest: /etc/systemd/system/
+    mode: 0755

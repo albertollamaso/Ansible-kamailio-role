@@ -1,0 +1,17 @@
+---
+# Include variables and define needed variables.
+- name: Include OS-specific variables.
+  include_vars: "{{ ansible_os_family }}.yml"
+  tags: ['package','application','configuration','users','groups']
+
+
+# Setup/install tasks.
+- include: setup-RedHat.yml
+  when: ansible_os_family == 'RedHat'
+  tags: ['package','application','configuration']
+
+- include: setup-Debian.yml
+  when: ansible_os_family == 'Debian'
+  tags: ['package','application','configuration']
+
+- include: setup.yml
